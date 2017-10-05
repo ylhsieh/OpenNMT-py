@@ -62,7 +62,7 @@ class Translator(object):
                 if tokens[i] == onmt.Constants.UNK_WORD:
                     _, maxIndex = attn[i].max(0)
                     try:
-                    tokens[i] = src[maxIndex[0]]
+                        tokens[i] = src[maxIndex[0]]
                     except:
                         tokens[i] = '.'
         return tokens
@@ -81,7 +81,7 @@ class Translator(object):
 
         #  This mask is applied to the attention model inside the decoder
         #  so that the attention ignores source padding
-            padMask = srcBatch.data.eq(onmt.Constants.PAD).t()
+        padMask = srcBatch.data.eq(onmt.Constants.PAD).t()
 
         def applyContextMask(m):
             if isinstance(m, onmt.modules.GlobalAttention):
@@ -173,7 +173,7 @@ class Translator(object):
             decStates = (updateActive(decStates[0]), updateActive(decStates[1]))
             decOut = updateActive(decOut)
             context = updateActive(context)
-                padMask = padMask.index_select(1, activeIdx)
+            padMask = padMask.index_select(1, activeIdx)
 
             remainingSents = len(active)
 
@@ -188,7 +188,7 @@ class Translator(object):
             allScores += [scores[:n_best]]
             valid_attn = srcBatch.data[:, b].ne(onmt.Constants.PAD).nonzero().squeeze(1)
             hyps, attn = zip(*[beam[b].getHyp(k) for k in ks[:n_best]])
-                attn = [a.index_select(1, valid_attn) for a in attn]
+            attn = [a.index_select(1, valid_attn) for a in attn]
             allHyp += [hyps]
             allAttn += [attn]
 
