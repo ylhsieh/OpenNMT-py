@@ -31,9 +31,7 @@ class Encoder(nn.Module):
 
     def forward(self, input, hidden=None):
         if isinstance(input, tuple):
-            # Lengths data is wrapped inside a Variable.
-            lengths = input[1].data.view(-1).tolist()
-            emb = pack(self.word_lut(input[0]), lengths)
+            emb = pack(self.word_lut(input[0]), input[1])
         else:
             emb = self.word_lut(input)
         outputs, hidden_t = self.rnn(emb, hidden)
