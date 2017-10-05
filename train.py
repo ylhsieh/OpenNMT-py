@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+
+from __future__ import print_function
 from __future__ import division
 
 import onmt
-import onmt.Markdown
-import onmt.modules
 import argparse
 import torch
 import torch.nn as nn
@@ -12,7 +15,6 @@ import math
 import time
 
 parser = argparse.ArgumentParser(description='train.py')
-onmt.Markdown.add_md_help_argument(parser)
 
 # Data options
 
@@ -31,11 +33,11 @@ parser.add_argument('-train_from', default='', type=str,
 
 # Model options
 
-parser.add_argument('-layers', type=int, default=2,
+parser.add_argument('-layers', type=int, default=1,
                     help='Number of layers in the LSTM encoder/decoder')
-parser.add_argument('-rnn_size', type=int, default=500,
+parser.add_argument('-rnn_size', type=int, default=300,
                     help='Size of LSTM hidden states')
-parser.add_argument('-word_vec_size', type=int, default=500,
+parser.add_argument('-word_vec_size', type=int, default=300,
                     help='Word embedding sizes')
 parser.add_argument('-input_feed', type=int, default=1,
                     help="""Feed the context vector at each time step as
@@ -49,9 +51,8 @@ parser.add_argument('-brnn_merge', default='concat',
                     help="""Merge action for the bidirectional hidden states:
                     [concat|sum]""")
 
-# Optimization options
-parser.add_argument('-encoder_type', default='text',
-                    help="Type of encoder to use. Options are [text|img].")
+## Optimization options
+
 parser.add_argument('-batch_size', type=int, default=64,
                     help='Maximum batch size')
 parser.add_argument('-max_generator_batches', type=int, default=32,
@@ -70,7 +71,7 @@ parser.add_argument('-optim', default='sgd',
 parser.add_argument('-max_grad_norm', type=float, default=5,
                     help="""If the norm of the gradient vector exceeds this,
                     renormalize it to have the norm equal to max_grad_norm""")
-parser.add_argument('-dropout', type=float, default=0.3,
+parser.add_argument('-dropout', type=float, default=0.5,
                     help='Dropout probability; applied between LSTM stacks.')
 parser.add_argument('-curriculum', action="store_true",
                     help="""For this many epochs, order the minibatches based
@@ -81,17 +82,17 @@ parser.add_argument('-extra_shuffle', action="store_true",
                     shuffle and re-assign mini-batches""")
 
 # learning rate
-parser.add_argument('-learning_rate', type=float, default=1.0,
+parser.add_argument('-learning_rate', type=float, default=.1,
                     help="""Starting learning rate. If adagrad/adadelta/adam is
                     used, then this is the global learning rate. Recommended
                     settings: sgd = 1, adagrad = 0.1,
                     adadelta = 1, adam = 0.001""")
-parser.add_argument('-learning_rate_decay', type=float, default=0.5,
+parser.add_argument('-learning_rate_decay', type=float, default=0.9,
                     help="""If update_learning_rate, decay learning rate by
                     this much if (i) perplexity does not decrease on the
                     validation set or (ii) epoch has gone past
                     start_decay_at""")
-parser.add_argument('-start_decay_at', type=int, default=8,
+parser.add_argument('-start_decay_at', type=int, default=10,
                     help="""Start decaying every epoch after and including this
                     epoch""")
 
@@ -123,8 +124,7 @@ if torch.cuda.is_available() and not opt.gpus:
 if opt.gpus:
     cuda.set_device(opt.gpus[0])
 
-
-def NMTCriterion(vocabSize):
+def NegLogLossCriterion(vocabSize):
     weight = torch.ones(vocabSize)
     weight[onmt.Constants.PAD] = 0
     crit = nn.NLLLoss(weight, size_average=False)
@@ -132,10 +132,9 @@ def NMTCriterion(vocabSize):
         crit.cuda()
     return crit
 
-
 def memoryEfficientLoss(outputs, targets, generator, crit, eval=False):
     # compute generations one piece at a time
-    num_correct, loss = 0, 0
+    num_correct, loss = 0., 0.
     outputs = Variable(outputs.data, requires_grad=(not eval), volatile=eval)
 
     batch_size = outputs.size(1)
@@ -160,17 +159,15 @@ def memoryEfficientLoss(outputs, targets, generator, crit, eval=False):
 
 
 def eval(model, criterion, data):
-    total_loss = 0
-    total_words = 0
-    total_num_correct = 0
+    total_loss = 0.
+    total_words = 0.
+    total_num_correct = 0.
 
     model.eval()
     for i in range(len(data)):
-        # exclude original indices
-        batch = data[i][:-1]
+        batch = data[i][:-1] # exclude original indices
         outputs = model(batch)
-        # exclude <s> from targets
-        targets = batch[1][1:]
+        targets = batch[1][1:]  # exclude <s> from targets
         loss, _, num_correct = memoryEfficientLoss(
                 outputs, targets, model.generator, criterion, eval=True)
         total_loss += loss
@@ -185,8 +182,8 @@ def trainModel(model, trainData, validData, dataset, optim):
     print(model)
     model.train()
 
-    # Define criterion of each GPU.
-    criterion = NMTCriterion(dataset['dicts']['tgt'].size())
+    # define criterion of each GPU
+    criterion = NegLogLossCriterion(dataset['dicts']['tgt'].size())
 
     start_time = time.time()
 
@@ -198,9 +195,8 @@ def trainModel(model, trainData, validData, dataset, optim):
         # Shuffle mini batch order.
         batchOrder = torch.randperm(len(trainData))
 
-        total_loss, total_words, total_num_correct = 0, 0, 0
-        report_loss, report_tgt_words = 0, 0
-        report_src_words, report_num_correct = 0, 0
+        total_loss, total_words, total_num_correct = 0., 0., 0.
+        report_loss, report_tgt_words, report_src_words, report_num_correct = 0., 0., 0., 0.
         start = time.time()
         for i in range(len(trainData)):
 
@@ -295,12 +291,10 @@ def main():
         dataset['dicts'] = checkpoint['dicts']
 
     trainData = onmt.Dataset(dataset['train']['src'],
-                             dataset['train']['tgt'], opt.batch_size, opt.gpus,
-                             data_type=dataset.get("type", "text"))
+                             dataset['train']['tgt'], opt.batch_size, opt.gpus)
     validData = onmt.Dataset(dataset['valid']['src'],
-                             dataset['valid']['tgt'], opt.batch_size, opt.gpus,
-                             volatile=True,
-                             data_type=dataset.get("type", "text"))
+                             dataset['valid']['tgt'], min(opt.batch_size, len(dataset['valid']['src'])), opt.gpus,
+                             volatile=True)
 
     dicts = dataset['dicts']
     print(' * vocabulary size. source = %d; target = %d' %
@@ -311,14 +305,7 @@ def main():
 
     print('Building model...')
 
-    if opt.encoder_type == "text":
         encoder = onmt.Models.Encoder(opt, dicts['src'])
-    elif opt.encoder_type == "img":
-        encoder = onmt.modules.ImageEncoder(opt)
-        assert("type" not in dataset or dataset["type"] == "img")
-    else:
-        print("Unsupported encoder type %s" % (opt.encoder_type))
-
     decoder = onmt.Models.Decoder(opt, dicts['tgt'])
 
     generator = nn.Sequential(
