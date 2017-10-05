@@ -305,7 +305,7 @@ def main():
 
     print('Building model...')
 
-        encoder = onmt.Models.Encoder(opt, dicts['src'])
+    encoder = onmt.Models.Encoder(opt, dicts['src'])
     decoder = onmt.Models.Decoder(opt, dicts['tgt'])
 
     generator = nn.Sequential(
