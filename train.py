@@ -220,7 +220,7 @@ def trainModel(model, trainData, validData, dataset, optim):
             report_loss += loss
             report_num_correct += num_correct
             report_tgt_words += num_words
-            report_src_words += batch[0][1].data.sum()
+            report_src_words += sum(batch[0][1])
             total_loss += loss
             total_num_correct += num_correct
             total_words += num_words
