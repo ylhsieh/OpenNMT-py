@@ -15,7 +15,7 @@ class Translator(object):
         self.src_dict = checkpoint['dicts']['src']
         self.tgt_dict = checkpoint['dicts']['tgt']
 
-            encoder = onmt.Models.Encoder(model_opt, self.src_dict)
+        encoder = onmt.Models.Encoder(model_opt, self.src_dict)
         decoder = onmt.Models.Decoder(model_opt, self.tgt_dict)
         model = onmt.Models.NMTModel(encoder, decoder)
 
