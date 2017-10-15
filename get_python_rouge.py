@@ -140,11 +140,11 @@ def rouge_l(peer, models, alpha=1):
 if __name__ == "__main__":
     answers = []
     for line in open(opt.ans).readlines():
-        line_split = line.decode('utf8').strip().split(' ')
+        line_split = line.decode('utf8').strip()
         answers.append([line_split])
     predictions = []
     for line in open(opt.pred).readlines():
-        line_split = line.decode('utf8').strip().split(' ')
+        line_split = line.decode('utf8').strip()
         predictions.append(line_split)
     rouge_ones = []
     rouge_twos = []
